@@ -59,15 +59,14 @@ class CameraViewController: UIViewController {
         
         self.setupView()
         self.setupPicker()
-        self.setupCamera()
         self.setupOpenCV()
         self.setupCoreML()
+        self.setupCamera()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         print("camera viewWillAppear")
         super.viewWillAppear(animated)
-        self.session.startRunning()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -128,6 +127,7 @@ class CameraViewController: UIViewController {
                         self.initCamera()
                     } else {
                         // 退出
+                        exit(0)
                     }
                 })
                 break
@@ -201,6 +201,8 @@ class CameraViewController: UIViewController {
         self.device = self.cameraFront
         self.configCamera()
         self.session.commitConfiguration()
+        
+        self.session.startRunning()
     }
     
     
