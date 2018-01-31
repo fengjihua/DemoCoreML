@@ -24,7 +24,7 @@ struct OpenCVDataSource {
 }
 
 struct MLModelDataSource {
-    let values = ["MobileNet", "MobileNetV2", "SqueezeNet", "GoogLenet", "Resnet", "InceptionV3", "YOLO", "SSD"]
+    let values = ["MobileNet", "MobileNetV2", "SqueezeNet", "GoogLeNet", "InceptionV3", "Resnet", "YOLO", "SSD"]
     
     func title(for index: Int) -> String? {
         guard index < values.count else { return nil }

@@ -28,11 +28,9 @@
 }
 
 - (UIImage*)pipeline:(UIImage*)image withVision:(NSInteger)vision withModel:(NSInteger)model {
-    NSLog(@"opencv pipline");
+    NSLog(@"OpenCV Pipline...");
     
     // Process Image Pipline
-    double start = [[NSDate date] timeIntervalSince1970] * 1000;
-    
     cv::Mat img_rgb;
     cv::Mat img_gray;
     cv::Mat img_final;
@@ -77,12 +75,7 @@
     cv::meanStdDev(img_final, mean, stddev);
 //    NSLog(@"%f  %f", mean[0], stddev[0]);
     
-    double end = [[NSDate date] timeIntervalSince1970] * 1000;
-    double interval = end - start;
-    double fps = 1000 / interval;
-    
     self.blur = int(stddev[0]);
-    self.fps = int(fps);
     
     // OpenCV Matrix to iOS Image
     return MatToUIImage(img_final);

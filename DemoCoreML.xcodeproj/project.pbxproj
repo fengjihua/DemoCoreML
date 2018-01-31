@@ -15,6 +15,11 @@
 		4C163E70201C96F900488ADC /* OpencvViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4C163E6F201C96F900488ADC /* OpencvViewController.mm */; };
 		4C163E90201C9F2000488ADC /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4C163E8E201C9F1C00488ADC /* Main.storyboard */; };
 		4C163E91201C9F2200488ADC /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4C163E8C201C9F1C00488ADC /* LaunchScreen.storyboard */; };
+		4C2DBAEB2021948400837EBE /* MobileNet.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 4C2DBAEA2021948400837EBE /* MobileNet.mlmodel */; };
+		4C2DBAED2021EC7D00837EBE /* SqueezeNet.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 4C2DBAEC2021EC7D00837EBE /* SqueezeNet.mlmodel */; };
+		4C2DBAEF2021ED0200837EBE /* GoogLeNetPlaces.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 4C2DBAEE2021ED0200837EBE /* GoogLeNetPlaces.mlmodel */; };
+		4C2DBAF12021EDEA00837EBE /* Inceptionv3.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 4C2DBAF02021EDE900837EBE /* Inceptionv3.mlmodel */; };
+		4C2DBAF32022001A00837EBE /* Resnet50.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 4C2DBAF22022001900837EBE /* Resnet50.mlmodel */; };
 		4C357A3D201F6CCD00304698 /* PickerViewDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C357A3C201F6CCD00304698 /* PickerViewDataSource.swift */; };
 /* End PBXBuildFile section */
 
@@ -31,6 +36,11 @@
 		4C163E6F201C96F900488ADC /* OpencvViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = OpencvViewController.mm; sourceTree = "<group>"; };
 		4C163E8D201C9F1C00488ADC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		4C163E8F201C9F1C00488ADC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		4C2DBAEA2021948400837EBE /* MobileNet.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = MobileNet.mlmodel; sourceTree = "<group>"; };
+		4C2DBAEC2021EC7D00837EBE /* SqueezeNet.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = SqueezeNet.mlmodel; sourceTree = "<group>"; };
+		4C2DBAEE2021ED0200837EBE /* GoogLeNetPlaces.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = GoogLeNetPlaces.mlmodel; sourceTree = "<group>"; };
+		4C2DBAF02021EDE900837EBE /* Inceptionv3.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = Inceptionv3.mlmodel; sourceTree = "<group>"; };
+		4C2DBAF22022001900837EBE /* Resnet50.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = Resnet50.mlmodel; sourceTree = "<group>"; };
 		4C357A3C201F6CCD00304698 /* PickerViewDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickerViewDataSource.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -49,6 +59,7 @@
 		4C0DC5B2201BAF5E00F168A5 = {
 			isa = PBXGroup;
 			children = (
+				4C2DBAE92021920800837EBE /* Model */,
 				4C0DC5D0201BAFA700F168A5 /* Framework */,
 				4C0DC5BD201BAF5E00F168A5 /* DemoCoreML */,
 				4C0DC5BC201BAF5E00F168A5 /* Products */,
@@ -95,6 +106,18 @@
 				4C0DC5CA201BAF5E00F168A5 /* Info.plist */,
 			);
 			name = Resources;
+			sourceTree = "<group>";
+		};
+		4C2DBAE92021920800837EBE /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				4C2DBAEA2021948400837EBE /* MobileNet.mlmodel */,
+				4C2DBAEC2021EC7D00837EBE /* SqueezeNet.mlmodel */,
+				4C2DBAEE2021ED0200837EBE /* GoogLeNetPlaces.mlmodel */,
+				4C2DBAF02021EDE900837EBE /* Inceptionv3.mlmodel */,
+				4C2DBAF22022001900837EBE /* Resnet50.mlmodel */,
+			);
+			path = Model;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -169,8 +192,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4C2DBAF32022001A00837EBE /* Resnet50.mlmodel in Sources */,
 				4C0DC5C1201BAF5E00F168A5 /* ViewController.swift in Sources */,
+				4C2DBAF12021EDEA00837EBE /* Inceptionv3.mlmodel in Sources */,
 				4C357A3D201F6CCD00304698 /* PickerViewDataSource.swift in Sources */,
+				4C2DBAEB2021948400837EBE /* MobileNet.mlmodel in Sources */,
+				4C2DBAEF2021ED0200837EBE /* GoogLeNetPlaces.mlmodel in Sources */,
+				4C2DBAED2021EC7D00837EBE /* SqueezeNet.mlmodel in Sources */,
 				4C0DC5BF201BAF5E00F168A5 /* AppDelegate.swift in Sources */,
 				4C0DC5D4201BB10800F168A5 /* CameraViewController.swift in Sources */,
 				4C163E70201C96F900488ADC /* OpencvViewController.mm in Sources */,
@@ -317,7 +345,7 @@
 					"$(PROJECT_DIR)/Framework",
 				);
 				INFOPLIST_FILE = DemoCoreML/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.daoshml.DemoCoreML;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -339,7 +367,7 @@
 					"$(PROJECT_DIR)/Framework",
 				);
 				INFOPLIST_FILE = DemoCoreML/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.daoshml.DemoCoreML;
 				PRODUCT_NAME = "$(TARGET_NAME)";

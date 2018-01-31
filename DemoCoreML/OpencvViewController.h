@@ -11,7 +11,7 @@
 @interface OpencvViewController : UIViewController
 
 @property (nonatomic, assign) int blur;
-@property (nonatomic, assign) int fps;
+//@property (nonatomic, assign) int fps;
 
 - (UIImage*)pipeline:(UIImage*) image withVision:(NSInteger)vision withModel:(NSInteger)model;
 

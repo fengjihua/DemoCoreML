@@ -8,12 +8,15 @@
 
 import UIKit
 import AVFoundation
+import CoreML
+import Vision
 
 class CameraViewController: UIViewController {
     
     @IBOutlet weak var imageView: UIImageView!
     @IBOutlet weak var labelBlur: UILabel!
     @IBOutlet weak var labelFps: UILabel!
+    @IBOutlet weak var labelClassification: UILabel!
     
     /// Data source for the picker.
     let pickerDataSource = PickerDataSource()
@@ -30,6 +33,9 @@ class CameraViewController: UIViewController {
     }
     var pipelineVision: Int! = 0
     var pipelineModel: Int! = 0
+    var pipelineFpsRun: Bool! = true
+    var pipelineStartTime: Double!
+    var pipelineEndTime: Double!
     
     var session: AVCaptureSession!
     var device: AVCaptureDevice!
@@ -41,15 +47,21 @@ class CameraViewController: UIViewController {
     var usePreviewLayer: Bool! = false
     
     var opencv: OpencvViewController!
+    var classificationRequest: VNCoreMLRequest!
+    let semaphore = DispatchSemaphore(value: 2)
 
+    /*
+    ** MARK: - Override
+     */
     override func viewDidLoad() {
         super.viewDidLoad()
         print("camera viewDidLoad", self.view.frame)
         
         self.setupView()
         self.setupPicker()
-        self.setupOpenCV()
         self.setupCamera()
+        self.setupOpenCV()
+        self.setupCoreML()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -75,7 +87,7 @@ class CameraViewController: UIViewController {
     
     
     /*
-     ** Setup View
+     ** MARK: - Setup
      */
     func setupView() -> Void {
         print("setup view")
@@ -95,7 +107,7 @@ class CameraViewController: UIViewController {
     
     
     /*
-     ** Setup Camera
+     ** MARK: - Camera
      */
     func setupCamera() -> Void {
         print("setup camera")
@@ -179,7 +191,9 @@ class CameraViewController: UIViewController {
             self.previewLayer.videoGravity = AVLayerVideoGravity.resizeAspect
             self.previewLayer.connection?.videoOrientation = .portrait
             self.previewLayer.frame = self.view.bounds
+            self.previewLayer.backgroundColor = UIColor.black.cgColor
             self.view.layer.addSublayer(self.previewLayer)
+            self.previewLayer.zPosition = -99
         }
         
         self.session.beginConfiguration()
@@ -267,6 +281,10 @@ class CameraViewController: UIViewController {
         }
     }
     
+    
+    /*
+     ** MARK: - Picker
+     */
     @IBAction func pickerShow() -> Void {
         self.pickerView.isHidden = false;
         self.pickerCloser.isHidden = false
@@ -277,31 +295,137 @@ class CameraViewController: UIViewController {
         self.pickerCloser.isHidden = true
     }
     
-
+    
     /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
+     ** MARK: - CoreML
+     */
+    func setupCoreML() -> Void {
+        do {
+            /*
+             Use the Swift class `MobileNet` Core ML generates from the model.
+             To use a different Core ML classifier model, add it to the project
+             and replace `MobileNet` with that model's generated Swift class.
+             */
+            var model: VNCoreMLModel
+            switch self.pipelineModel {
+            case 0: model = try VNCoreMLModel(for: MobileNet().model)
+            case 2: model = try VNCoreMLModel(for: SqueezeNet().model)
+            case 3: model = try VNCoreMLModel(for: GoogLeNetPlaces().model)
+            case 4: model = try VNCoreMLModel(for: Inceptionv3().model)
+            case 5: model = try VNCoreMLModel(for: Resnet50().model)
+            default: model = try VNCoreMLModel(for: SqueezeNet().model)
+            }
+//            let model = try VNCoreMLModel(for: MobileNet().model)
+//            let model = try VNCoreMLModel(for: SqueezeNet().model)
+//            let model = try VNCoreMLModel(for: GoogLeNetPlaces().model)
+//            let model = try VNCoreMLModel(for: Inceptionv3().model)
+//            let model = try VNCoreMLModel(for: Resnet50().model)
+            
+            self.classificationRequest = VNCoreMLRequest(model: model, completionHandler: predictDidComplete)
+            self.classificationRequest.imageCropAndScaleOption = .centerCrop
+        } catch {
+            fatalError("Failed to load Vision ML model: \(error)")
+        }
     }
-    */
+    
+    func predictClassification(image: UIImage) {
+//        self.labelClassification.text = "Classifying..."
+        
+        semaphore.wait()
+        print("CoreML Classifying...")
+        
+        guard let ciImage = CIImage(image: image) else { fatalError("Unable to create \(CIImage.self) from \(image).") }
 
+        guard let orientation = CGImagePropertyOrientation(rawValue: UInt32(image.imageOrientation.rawValue)) else { fatalError("Unable to create orientation from \(image.imageOrientation).") }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let handler = VNImageRequestHandler(ciImage: ciImage, orientation: orientation)
+            do {
+                try handler.perform([self.classificationRequest])
+            } catch {
+                /*
+                 This handler catches general image processing errors. The `classificationRequest`'s
+                 completion handler `processClassifications(_:error:)` catches errors specific
+                 to processing that request.
+                 */
+                print("Failed to perform classification.\n\(error.localizedDescription)")
+            }
+            
+//            print(ciImage, orientation, handler)
+        }
+    }
+    
+    func predictClassification(pixelBuffer: CVPixelBuffer) {
+        semaphore.wait()
+        print("CoreML Classifying...")
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer)
+            do {
+                try handler.perform([self.classificationRequest])
+            } catch {
+                print("Failed to perform classification.\n\(error.localizedDescription)")
+            }
+        }
+    }
+    
+    func predictDidComplete(request: VNRequest, error: Error?) {
+        DispatchQueue.main.async {
+            print("== DispatchQueue.main.async CoreML")
+            guard let results = request.results else {
+                self.labelClassification.text = "Unable to classify image."
+                print("Unable to classify image.")
+                return
+            }
+            // The `results` will always be `VNClassificationObservation`s, as specified by the Core ML model in this project.
+            let classifications = results as! [VNClassificationObservation]
+            
+            if classifications.isEmpty {
+                //                self.labelClassification.text = "Nothing recognized."
+                print("Nothing recognized.")
+            } else {
+                // Display top classifications ranked by confidence in the UI.
+                let topClassifications = classifications.prefix(3)
+                let descriptions = topClassifications.map { classification in
+                    // Formats the classification for display; e.g. "(0.37) cliff, drop, drop-off".
+                    return String(format: "(%.2f)  %@", classification.confidence, classification.identifier)
+                }
+                self.labelClassification.text = descriptions.joined(separator: "\n")
+                print("Classification:\n" + descriptions.joined(separator: "\n"))
+            }
+            
+            // Calculate FPS
+            self.labelFps.text = String(self.measureFPS())
+            self.semaphore.signal()
+        }
+    }
+    
+    func measureFPS() -> Int {
+        let interval = NSDate.timeIntervalSinceReferenceDate * 1000 - self.pipelineStartTime;
+        let fps = Int(1000 / interval);
+        self.pipelineFpsRun = true
+        return fps
+    }
 }
 
+
+// MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
 extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
     
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         print("======== captureOutput")
+        if (self.pipelineFpsRun) {
+            self.pipelineFpsRun = false
+            self.pipelineStartTime = NSDate.timeIntervalSinceReferenceDate * 1000
+        }
         
-        guard let capturedImage = self.getImageFromBuffer(sampleBuffer: sampleBuffer) else {
+        guard case let (capturedImage?, pixelBuffer?) = self.getImageFromBuffer(sampleBuffer: sampleBuffer) else {
             print("could not get UIImage from buffer")
             return
         }
         
         // 调用 OpenCV Pipeline
-        print(self.pipelineVision, self.pipelineModel)
+//        print(self.pipelineVision, self.pipelineModel)
         guard let cvImage = self.opencv.pipeline(capturedImage, withVision: self.pipelineVision, withModel: self.pipelineModel) else {
             print("could not process UIImage from OpenCV")
             return
@@ -318,6 +442,10 @@ extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
                                  scale: 1.0,
                                  orientation: orientation)
         
+        // 预测分类
+//        self.predictClassification(image: finalImage)
+        self.predictClassification(pixelBuffer: pixelBuffer)
+        
         
 //        // GCD 主线程队列中刷新UI
 //        dispatch_async(dispatch_get_main_queue()) {
@@ -325,12 +453,11 @@ extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
 //            self.imageView.image = capturedImage
 //        }
         DispatchQueue.main.async {
-            print("== DispatchQueue.main.async")
+            print("== DispatchQueue.main.async OpenCV")
             if (!self.usePreviewLayer) {
                 self.imageView.image = finalImage
             }
             self.labelBlur.text = String(self.opencv.blur)
-            self.labelFps.text = String(self.opencv.fps)
         }
     }
     
@@ -338,11 +465,11 @@ extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
     /*
      ** Capture Video Buffer to UIImage
      */
-    func getImageFromBuffer(sampleBuffer: CMSampleBuffer) -> UIImage? {
+    func getImageFromBuffer(sampleBuffer: CMSampleBuffer) -> (UIImage?, CVPixelBuffer?) {
         // 将捕捉到的 image buffer 转换成 UIImage.
         guard let buffer: CVPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             print("could not get a pixel buffer")
-            return nil
+            return (nil, nil)
         }
         
         let capturedImage: UIImage
@@ -360,15 +487,15 @@ extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
             let info = CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue
             guard let context = CGContext(data: address, width: width, height: height, bitsPerComponent: bits, bytesPerRow: bytes, space: color, bitmapInfo: info) else {
                 print("could not create an CGContext")
-                return nil
+                return (nil, nil)
             }
             guard let image = context.makeImage() else {
                 print("could not create an CGImage")
-                return nil
+                return (nil, nil)
             }
             capturedImage = UIImage(cgImage: image, scale: 1.0, orientation: UIImageOrientation.up)
             
-            return capturedImage
+            return (capturedImage, buffer)
         }
 //        catch let error as NSError {
 //            print(error)
@@ -376,8 +503,9 @@ extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
     }
 }
 
+
+// MARK: - UIPickerViewDelegate
 extension CameraViewController: UIPickerViewDelegate {
-    // MARK: - UIPickerViewDelegate
     
     /// When values are changed, update the predicted price.
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
@@ -388,6 +516,7 @@ extension CameraViewController: UIPickerViewDelegate {
             self.pipelineVision = row
         case 1:
             self.pipelineModel = row
+            self.setupCoreML()
         default:
             return
         }
