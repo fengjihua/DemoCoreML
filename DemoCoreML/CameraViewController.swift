@@ -61,12 +61,17 @@ class CameraViewController: UIViewController {
         self.setupPicker()
         self.setupOpenCV()
         self.setupCoreML()
-        self.setupCamera()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         print("camera viewWillAppear")
         super.viewWillAppear(animated)
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        print("camera viewDidAppear")
+        super.viewDidAppear(animated)
+        self.setupCamera()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -135,20 +140,21 @@ class CameraViewController: UIViewController {
             case .restricted, .denied:  // 受限或拒绝授权，引导授权
                 print("camera restricted or denied")
                 let alert = UIAlertController(title: "提示",
-                                              message: "摄像头权限未未开启,点击确认跳转至设置",
+                                              message: "摄像头权限未开启",
                                               preferredStyle: UIAlertControllerStyle.alert)
-                let cancelAction = UIAlertAction(title: "取消", style: .cancel, handler: {
+                let cancelAction = UIAlertAction(title: "知道了", style: .cancel, handler: {
                     (action: UIAlertAction) -> Void in
                     /**
                      写取消后操作
                      */
                 })
-                let okAction = UIAlertAction(title: "好的", style: .default, handler: {
+                let okAction = UIAlertAction(title: "去设置", style: .default, handler: {
                     (action: UIAlertAction) -> Void in
                     /**
                      写确定后操作
                      */
                     let settingsURL = URL(string:UIApplicationOpenSettingsURLString)!
+                    print(settingsURL)
                     UIApplication.shared.open(settingsURL,
                                               options: [:],
                                               completionHandler: {
