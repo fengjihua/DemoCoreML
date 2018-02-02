@@ -33,24 +33,21 @@
     // Process Image Pipline
     cv::Mat img_rgb;
     cv::Mat img_gray;
+    cv::Mat img_laplace;
     cv::Mat img_final;
     
     // iOS Image to OpenCV Matrix
     UIImageToMat(image, img_rgb);
-    
+
     if (vision == 0) {
         img_final = img_rgb;
     }
     
     // 首先将图片由RGBA转成GRAY
-    if (vision > 0) {
-        cv::cvtColor(img_rgb, img_gray, cv::COLOR_RGB2GRAY);
-    }
-    
+    cv::cvtColor(img_rgb, img_gray, cv::COLOR_RGB2GRAY);
     if (vision == 1) {
         img_final = img_gray;
     }
-    
     
     // 反转
     if (vision == 2) {
@@ -62,9 +59,10 @@
         img_final = [self sobel:img_gray];
     }
     
+    img_laplace = [self sobel:img_gray];
     // Laplace 算子
     if (vision == 4) {
-        img_final = [self laplace:img_gray];
+        img_final = img_laplace;
     }
     
     // 将处理后的图片赋值给image，用来显示
@@ -72,8 +70,8 @@
     
     cv::Scalar mean;
     cv::Scalar stddev;
-    cv::meanStdDev(img_final, mean, stddev);
-//    NSLog(@"%f  %f", mean[0], stddev[0]);
+    cv::meanStdDev(img_laplace, mean, stddev);
+    NSLog(@"%f  %f", mean[0], stddev[0]);
     
     self.blur = int(stddev[0]);
     

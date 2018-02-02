@@ -12,6 +12,7 @@
 		4C0DC5C6201BAF5E00F168A5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4C0DC5C5201BAF5E00F168A5 /* Assets.xcassets */; };
 		4C0DC5D2201BAFD700F168A5 /* opencv2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C0DC5D1201BAFCA00F168A5 /* opencv2.framework */; };
 		4C0DC5D4201BB10800F168A5 /* CameraViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0DC5D3201BB10800F168A5 /* CameraViewController.swift */; };
+		4C1539E920235BC600D8DF36 /* BestImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C1539E820235BC600D8DF36 /* BestImageViewController.swift */; };
 		4C163E70201C96F900488ADC /* OpencvViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4C163E6F201C96F900488ADC /* OpencvViewController.mm */; };
 		4C163E90201C9F2000488ADC /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4C163E8E201C9F1C00488ADC /* Main.storyboard */; };
 		4C163E91201C9F2200488ADC /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4C163E8C201C9F1C00488ADC /* LaunchScreen.storyboard */; };
@@ -31,6 +32,7 @@
 		4C0DC5CA201BAF5E00F168A5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4C0DC5D1201BAFCA00F168A5 /* opencv2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = opencv2.framework; sourceTree = "<group>"; };
 		4C0DC5D3201BB10800F168A5 /* CameraViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewController.swift; sourceTree = "<group>"; };
+		4C1539E820235BC600D8DF36 /* BestImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BestImageViewController.swift; sourceTree = "<group>"; };
 		4C163E6D201C96F800488ADC /* DemoCoreML-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "DemoCoreML-Bridging-Header.h"; sourceTree = "<group>"; };
 		4C163E6E201C96F900488ADC /* OpencvViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OpencvViewController.h; sourceTree = "<group>"; };
 		4C163E6F201C96F900488ADC /* OpencvViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = OpencvViewController.mm; sourceTree = "<group>"; };
@@ -81,6 +83,7 @@
 				4C0DC5C0201BAF5E00F168A5 /* ViewController.swift */,
 				4C0DC5D3201BB10800F168A5 /* CameraViewController.swift */,
 				4C357A3C201F6CCD00304698 /* PickerViewDataSource.swift */,
+				4C1539E820235BC600D8DF36 /* BestImageViewController.swift */,
 				4C163E6D201C96F800488ADC /* DemoCoreML-Bridging-Header.h */,
 				4C163E6E201C96F900488ADC /* OpencvViewController.h */,
 				4C163E6F201C96F900488ADC /* OpencvViewController.mm */,
@@ -202,6 +205,7 @@
 				4C0DC5BF201BAF5E00F168A5 /* AppDelegate.swift in Sources */,
 				4C0DC5D4201BB10800F168A5 /* CameraViewController.swift in Sources */,
 				4C163E70201C96F900488ADC /* OpencvViewController.mm in Sources */,
+				4C1539E920235BC600D8DF36 /* BestImageViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

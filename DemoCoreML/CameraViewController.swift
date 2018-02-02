@@ -33,7 +33,7 @@ class CameraViewController: UIViewController {
     }
     var pipelineVision: Int! = 0
     var pipelineModel: Int! = 0
-    var pipelineFpsRun: Bool! = true
+    var pipelineFpsRun: Bool!
     var pipelineStartTime: Double!
     var pipelineEndTime: Double!
     
@@ -44,20 +44,24 @@ class CameraViewController: UIViewController {
     var input: AVCaptureDeviceInput!
     var output: AVCaptureVideoDataOutput!
     var previewLayer: AVCaptureVideoPreviewLayer!
-    var usePreviewLayer: Bool! = false
+    var usePreviewLayer: Bool!
     
     var opencv: OpencvViewController!
     var classificationRequest: VNCoreMLRequest!
-    let semaphore = DispatchSemaphore(value: 2)
+    var semaphore: DispatchSemaphore!
+    
+    var thresholdBlur: Int!
+    var thresholdPropability: Float!
+    var classificationObject: String!
+    var thresholdBest: CVPixelBuffer!
+    var isBestImageExists: Bool!
 
     /*
     ** MARK: - Override
      */
     override func viewDidLoad() {
-        super.viewDidLoad()
         print("camera viewDidLoad", self.view.frame)
-        
-        self.setupView()
+        super.viewDidLoad()
         self.setupPicker()
         self.setupOpenCV()
         self.setupCoreML()
@@ -66,6 +70,8 @@ class CameraViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         print("camera viewWillAppear")
         super.viewWillAppear(animated)
+        self.setup()
+        self.setupView()
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -89,12 +95,37 @@ class CameraViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
     
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        print("prepare for segue")
+        // Get the new view controller using segue.destinationViewController.
+        // Pass the selected object to the new view controller.
+        if segue.identifier == "CameraToBestImage" {
+            let controller = segue.destination as! BestImageViewController
+            let image = sender as! UIImage
+            controller.image = self.fixImageOrientagion(image: image)
+        }
+    }
     
     /*
      ** MARK: - Setup
      */
+    func setup() -> Void {
+        self.usePreviewLayer = false
+        self.pipelineFpsRun = true
+        
+        if self.semaphore == nil {
+            self.semaphore = DispatchSemaphore(value: 2)
+        }
+        
+        self.thresholdBlur = 55
+        self.thresholdPropability = 0.25
+        self.classificationObject = "monitor"
+        self.isBestImageExists = false
+    }
+    
     func setupView() -> Void {
         print("setup view")
+        self.navigationController?.isNavigationBarHidden = true
         self.imageView.isHidden = self.usePreviewLayer
         self.imageView.contentMode = .scaleAspectFit
     }
@@ -337,8 +368,6 @@ class CameraViewController: UIViewController {
     }
     
     func predictClassification(image: UIImage) {
-//        self.labelClassification.text = "Classifying..."
-        
         semaphore.wait()
         print("CoreML Classifying...")
         
@@ -358,8 +387,6 @@ class CameraViewController: UIViewController {
                  */
                 print("Failed to perform classification.\n\(error.localizedDescription)")
             }
-            
-//            print(ciImage, orientation, handler)
         }
     }
     
@@ -389,7 +416,7 @@ class CameraViewController: UIViewController {
             let classifications = results as! [VNClassificationObservation]
             
             if classifications.isEmpty {
-                //                self.labelClassification.text = "Nothing recognized."
+//                self.labelClassification.text = "Nothing recognized."
                 print("Nothing recognized.")
             } else {
                 // Display top classifications ranked by confidence in the UI.
@@ -400,6 +427,23 @@ class CameraViewController: UIViewController {
                 }
                 self.labelClassification.text = descriptions.joined(separator: "\n")
                 print("Classification:\n" + descriptions.joined(separator: "\n"))
+                
+                // Auto Capture Best UIImage
+                if !self.isBestImageExists {
+                    for classification in topClassifications {
+                        if (classification.identifier.contains(self.classificationObject)
+                            && classification.confidence >= self.thresholdPropability) {
+                            print(classification.confidence, classification.identifier)
+                            guard let bestImage = self.getImageFromPixelBuffer(pixelBuffer: self.thresholdBest) else {
+                                print("could not get UIImage from pixel buffer")
+                                return
+                            }
+                            
+                            self.performSegue(withIdentifier: "CameraToBestImage", sender: bestImage)
+                            self.isBestImageExists = true
+                        }
+                    }
+                }
             }
             
             // Calculate FPS
@@ -409,6 +453,7 @@ class CameraViewController: UIViewController {
     }
     
     func measureFPS() -> Int {
+        print("measureFPS")
         let interval = NSDate.timeIntervalSinceReferenceDate * 1000 - self.pipelineStartTime;
         let fps = Int(1000 / interval);
         self.pipelineFpsRun = true
@@ -438,21 +483,14 @@ extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
             print("could not process UIImage from OpenCV")
             return
         }
-        
-        var orientation = UIImageOrientation.up
-        if (self.device == self.cameraFront) {
-            orientation = UIImageOrientation.leftMirrored
-        } else if (self.device == self.cameraBack) {
-            orientation = UIImageOrientation.right
-        }
-        
-        let finalImage = UIImage(cgImage: cvImage.cgImage!,
-                                 scale: 1.0,
-                                 orientation: orientation)
+        let finalImage = self.fixImageOrientagion(image: cvImage)
         
         // 预测分类
+        if (self.opencv.blur >= self.thresholdBlur) {
 //        self.predictClassification(image: finalImage)
-        self.predictClassification(pixelBuffer: pixelBuffer)
+            self.thresholdBest = pixelBuffer
+            self.predictClassification(pixelBuffer: pixelBuffer)
+        }
         
         
 //        // GCD 主线程队列中刷新UI
@@ -466,7 +504,22 @@ extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
                 self.imageView.image = finalImage
             }
             self.labelBlur.text = String(self.opencv.blur)
+            
+            if (self.opencv.blur < self.thresholdBlur) {
+                self.labelFps.text = String(self.measureFPS())
+            }
         }
+    }
+    
+    func fixImageOrientagion(image: UIImage) -> UIImage {
+        var orientation = UIImageOrientation.up
+        if (self.device == self.cameraFront) {
+            orientation = UIImageOrientation.leftMirrored
+        } else if (self.device == self.cameraBack) {
+            orientation = UIImageOrientation.right
+        }
+        
+        return UIImage(cgImage: image.cgImage!, scale: 1.0, orientation: orientation)
     }
     
     
@@ -509,6 +562,35 @@ extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
 //            print(error)
 //        }
     }
+    
+    func getImageFromPixelBuffer(pixelBuffer: CVPixelBuffer) -> UIImage? {
+        let capturedImage: UIImage
+        do {
+            CVPixelBufferLockBaseAddress(pixelBuffer, CVPixelBufferLockFlags.readOnly)
+            defer {
+                CVPixelBufferUnlockBaseAddress(pixelBuffer, CVPixelBufferLockFlags.readOnly)
+            }
+            let address = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0)
+            let bytes = CVPixelBufferGetBytesPerRow(pixelBuffer)
+            let width = CVPixelBufferGetWidth(pixelBuffer)
+            let height = CVPixelBufferGetHeight(pixelBuffer)
+            let color = CGColorSpaceCreateDeviceRGB()
+            let bits = 8
+            let info = CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue
+            guard let context = CGContext(data: address, width: width, height: height, bitsPerComponent: bits, bytesPerRow: bytes, space: color, bitmapInfo: info) else {
+                print("could not create an CGContext")
+                return nil
+            }
+            guard let image = context.makeImage() else {
+                print("could not create an CGImage")
+                return nil
+            }
+            capturedImage = UIImage(cgImage: image, scale: 1.0, orientation: UIImageOrientation.up)
+            
+            return capturedImage
+        }
+    }
+    
 }
 
 
