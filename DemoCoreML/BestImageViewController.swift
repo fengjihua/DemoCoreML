@@ -40,14 +40,25 @@ class BestImageViewController: UIViewController {
     @objc func pinchGestureHandler(recognizer: UIPinchGestureRecognizer) -> Void {
         print(recognizer.scale);
         
-        // #warning 放大图片后， 再次缩放的时候，马上回到原先的大小
-        //self.imageView.transform = CGAffineTransformMakeScale(pinGest.scale, pinGest.scale);
-        
         self.imageView.transform = self.imageView.transform.scaledBy(x: recognizer.scale, y: recognizer.scale)
-        self.scale = recognizer.scale
-        // 让比例还原，不要累加
-        // 解决办法，重新设置scale
-        recognizer.scale = 1;
+        
+        if recognizer.state == .ended {
+            print("ended")
+            print(self.imageView.transform.a)
+            print(self.imageView.bounds)
+            
+            self.scale = self.imageView.transform.a
+            
+            if self.scale < 0.75 {
+                self.scale = 0.75
+                self.imageView.transform = CGAffineTransform.identity.scaledBy(x: self.scale, y: self.scale)
+            } else if self.scale > 2 {
+                self.scale = 2
+                self.imageView.transform = CGAffineTransform.identity.scaledBy(x: self.scale, y: self.scale)
+            }
+        }
+        
+        recognizer.scale = 1
     }
     
     @objc func panGestureHandler(recognizer: UIPanGestureRecognizer) -> Void {
