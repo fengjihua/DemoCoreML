@@ -55,6 +55,7 @@ class CameraViewController: UIViewController {
     var classificationObject: String!
     var thresholdBest: CVPixelBuffer!
     var isBestImageExists: Bool!
+    var isYolo: Bool!
 
     /*
     ** MARK: - Override
@@ -117,8 +118,8 @@ class CameraViewController: UIViewController {
             self.semaphore = DispatchSemaphore(value: 2)
         }
         
-        self.thresholdBlur = 55
-        self.thresholdPropability = 0.25
+        self.thresholdBlur = 40
+        self.thresholdPropability = 0.10
         self.classificationObject = "monitor"
         self.isBestImageExists = false
     }
@@ -352,16 +353,31 @@ class CameraViewController: UIViewController {
             case 3: model = try VNCoreMLModel(for: GoogLeNetPlaces().model)
             case 4: model = try VNCoreMLModel(for: Inceptionv3().model)
             case 5: model = try VNCoreMLModel(for: Resnet50().model)
+            case 6: model = try VNCoreMLModel(for: TinyYOLO().model)
             default: model = try VNCoreMLModel(for: SqueezeNet().model)
             }
-//            let model = try VNCoreMLModel(for: MobileNet().model)
-//            let model = try VNCoreMLModel(for: SqueezeNet().model)
-//            let model = try VNCoreMLModel(for: GoogLeNetPlaces().model)
-//            let model = try VNCoreMLModel(for: Inceptionv3().model)
-//            let model = try VNCoreMLModel(for: Resnet50().model)
+            
+            if self.pipelineModel == 6 {
+                self.isYolo = true
+                YOLO.setup()
+                // Add the bounding box layers to the UI, on top of the video preview.
+                for box in YOLO.boundingBoxes {
+                    if self.usePreviewLayer {
+//                        box.addToLayer(self.previewLayer)
+                        box.addToLayer(self.view.layer)
+                    } else {
+                        box.addToLayer(self.imageView.layer)
+                    }
+                }
+            } else {
+                self.isYolo = false
+            }
             
             self.classificationRequest = VNCoreMLRequest(model: model, completionHandler: predictDidComplete)
             self.classificationRequest.imageCropAndScaleOption = .centerCrop
+            if self.isYolo {
+                self.classificationRequest.imageCropAndScaleOption = .scaleFill
+            }
         } catch {
             fatalError("Failed to load Vision ML model: \(error)")
         }
@@ -412,35 +428,105 @@ class CameraViewController: UIViewController {
                 print("Unable to classify image.")
                 return
             }
-            // The `results` will always be `VNClassificationObservation`s, as specified by the Core ML model in this project.
-            let classifications = results as! [VNClassificationObservation]
             
-            if classifications.isEmpty {
-//                self.labelClassification.text = "Nothing recognized."
-                print("Nothing recognized.")
-            } else {
-                // Display top classifications ranked by confidence in the UI.
-                let topClassifications = classifications.prefix(3)
-                let descriptions = topClassifications.map { classification in
-                    // Formats the classification for display; e.g. "(0.37) cliff, drop, drop-off".
-                    return String(format: "(%.2f)  %@", classification.confidence, classification.identifier)
-                }
-                self.labelClassification.text = descriptions.joined(separator: "\n")
-                print("Classification:\n" + descriptions.joined(separator: "\n"))
-                
-                // Auto Capture Best UIImage
-                if !self.isBestImageExists {
-                    for classification in topClassifications {
-                        if (classification.identifier.contains(self.classificationObject)
-                            && classification.confidence >= self.thresholdPropability) {
-                            print(classification.confidence, classification.identifier)
-                            guard let bestImage = self.getImageFromPixelBuffer(pixelBuffer: self.thresholdBest) else {
-                                print("could not get UIImage from pixel buffer")
-                                return
-                            }
+            if self.isYolo {
+                // YOLO `results` will be `VNCoreMLFeatureValueObservation`
+                let featureValues = results as! [VNCoreMLFeatureValueObservation]
+                if featureValues.isEmpty {
+                    print("Nothing recognized.")
+                } else {
+                    guard let features = featureValues.first?.featureValue.multiArrayValue else {
+                        print("Unable to classify image.")
+                        return
+                    }
+                    let predictions = YOLO.computePredictions(features: features)
+                    for i in 0..<YOLO.boundingBoxes.count {
+                        if i < predictions.count {
+                            let prediction = predictions[i]
                             
-                            self.performSegue(withIdentifier: "CameraToBestImage", sender: bestImage)
-                            self.isBestImageExists = true
+//                            print("YOLO image:", self.imageView.bounds, self.imageView.image!.size.width, self.imageView.image!.size.height)
+//                            print("YOLO predi:", prediction)
+                            
+                            // The predicted bounding box is in the coordinate space of the input
+                            // image, which is a square image of 416x416 pixels. We want to show it
+                            // on the video preview, which is as wide as the screen and has a 4:3
+                            // aspect ratio. The video preview also may be letterboxed at the top
+                            // and bottom.
+                            /*
+                             ** YOLO Coordinate
+                             */
+                            let heightYolo = self.imageView.bounds.width
+                            let widthYolo = heightYolo * 4 / 3
+                            let scaleXYolo = widthYolo / CGFloat(YOLO.inputWidth)
+                            let scaleYYolo = heightYolo / CGFloat(YOLO.inputHeight)
+                            
+                            // Translate and scale the rectangle.
+                            var rectYolo = prediction.rect
+                            rectYolo.origin.x *= scaleXYolo
+                            rectYolo.origin.y *= scaleYYolo
+                            rectYolo.size.width *= scaleXYolo
+                            rectYolo.size.height *= scaleYYolo
+                            
+                            /*
+                             ** iPhone Coordinate
+                             */
+                            let width = heightYolo
+                            let height = widthYolo
+//                            let scaleX = scaleYYolo
+//                            let scaleY = scaleXYolo
+                            let top = (self.imageView.bounds.height - height) / 2
+//                            print("YOLO scale:", width, height, top, scaleX, scaleY)
+                            
+                            var rect = prediction.rect
+                            rect.origin.x = width - rectYolo.origin.y - rectYolo.size.height
+                            rect.origin.y = rectYolo.origin.x
+                            rect.origin.y += top
+                            rect.size.width = rectYolo.size.height
+                            rect.size.height = rectYolo.size.width
+//                            print("YOLO rect:", rectYolo)
+//                            print("YOLO rect:", rect)
+                            
+                            // Show the bounding box.
+                            let label = String(format: "%@ %.1f", YOLO.labels[prediction.classIndex], prediction.score * 100)
+                            let color = YOLO.colors[prediction.classIndex]
+                            YOLO.boundingBoxes[i].show(frame: rect, label: label, color: color)
+                        } else {
+                            YOLO.boundingBoxes[i].hide()
+                        }
+                    }
+//                    let elapsed = CACurrentMediaTime() - startTimes.remove(at: 0)
+//                    showOnMainThread(boundingBoxes, elapsed)
+                }
+            } else {
+                // The `results` will always be `VNClassificationObservation`s, as specified by the Core ML model in this project.
+                let classifications = results as! [VNClassificationObservation]
+                if classifications.isEmpty {
+//                self.labelClassification.text = "Nothing recognized."
+                    print("Nothing recognized.")
+                } else {
+                    // Display top classifications ranked by confidence in the UI.
+                    let topClassifications = classifications.prefix(3)
+                    let descriptions = topClassifications.map { classification in
+                        // Formats the classification for display; e.g. "(0.37) cliff, drop, drop-off".
+                        return String(format: "(%.2f)  %@", classification.confidence, classification.identifier)
+                    }
+                    self.labelClassification.text = descriptions.joined(separator: "\n")
+                    print("Classification:\n" + descriptions.joined(separator: "\n"))
+                    
+                    // Auto Capture Best UIImage
+                    if !self.isBestImageExists {
+                        for classification in topClassifications {
+                            if (classification.identifier.contains(self.classificationObject)
+                                && classification.confidence >= self.thresholdPropability) {
+                                print(classification.confidence, classification.identifier)
+                                guard let bestImage = self.getImageFromPixelBuffer(pixelBuffer: self.thresholdBest) else {
+                                    print("could not get UIImage from pixel buffer")
+                                    return
+                                }
+                                
+                                self.performSegue(withIdentifier: "CameraToBestImage", sender: bestImage)
+                                self.isBestImageExists = true
+                            }
                         }
                     }
                 }
@@ -487,9 +573,13 @@ extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
         
         // 预测分类
         if (self.opencv.blur >= self.thresholdBlur) {
-//        self.predictClassification(image: finalImage)
             self.thresholdBest = pixelBuffer
-            self.predictClassification(pixelBuffer: pixelBuffer)
+            if self.isYolo {
+//                self.predictClassification(image: finalImage)
+                self.predictClassification(pixelBuffer: pixelBuffer)
+            } else {
+                self.predictClassification(pixelBuffer: pixelBuffer)
+            }
         }
         
         
@@ -554,7 +644,11 @@ extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
                 print("could not create an CGImage")
                 return (nil, nil)
             }
+            
+            print(width, height)
             capturedImage = UIImage(cgImage: image, scale: 1.0, orientation: UIImageOrientation.up)
+            
+//            capturedImage = UIImage(cgImage: image, scale: 1.0, orientation: CVPixelBufferGet)
             
             return (capturedImage, buffer)
         }

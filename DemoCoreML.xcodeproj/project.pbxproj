@@ -22,6 +22,9 @@
 		4C2DBAF12021EDEA00837EBE /* Inceptionv3.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 4C2DBAF02021EDE900837EBE /* Inceptionv3.mlmodel */; };
 		4C2DBAF32022001A00837EBE /* Resnet50.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 4C2DBAF22022001900837EBE /* Resnet50.mlmodel */; };
 		4C357A3D201F6CCD00304698 /* PickerViewDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C357A3C201F6CCD00304698 /* PickerViewDataSource.swift */; };
+		4C98954A20276A7E009A9B9A /* TinyYOLO.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 4C98954920276A7E009A9B9A /* TinyYOLO.mlmodel */; };
+		4C98954D202773FB009A9B9A /* YOLO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C98954C202773FB009A9B9A /* YOLO.swift */; };
+		4C98954F202780A5009A9B9A /* BoundingBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C98954E202780A5009A9B9A /* BoundingBox.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,6 +47,9 @@
 		4C2DBAF02021EDE900837EBE /* Inceptionv3.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = Inceptionv3.mlmodel; sourceTree = "<group>"; };
 		4C2DBAF22022001900837EBE /* Resnet50.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = Resnet50.mlmodel; sourceTree = "<group>"; };
 		4C357A3C201F6CCD00304698 /* PickerViewDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickerViewDataSource.swift; sourceTree = "<group>"; };
+		4C98954920276A7E009A9B9A /* TinyYOLO.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = TinyYOLO.mlmodel; sourceTree = "<group>"; };
+		4C98954C202773FB009A9B9A /* YOLO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YOLO.swift; sourceTree = "<group>"; };
+		4C98954E202780A5009A9B9A /* BoundingBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundingBox.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -79,6 +85,7 @@
 		4C0DC5BD201BAF5E00F168A5 /* DemoCoreML */ = {
 			isa = PBXGroup;
 			children = (
+				4C98954B202773E4009A9B9A /* YOLO */,
 				4C0DC5BE201BAF5E00F168A5 /* AppDelegate.swift */,
 				4C0DC5C0201BAF5E00F168A5 /* ViewController.swift */,
 				4C0DC5D3201BB10800F168A5 /* CameraViewController.swift */,
@@ -114,6 +121,7 @@
 		4C2DBAE92021920800837EBE /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				4C98954920276A7E009A9B9A /* TinyYOLO.mlmodel */,
 				4C2DBAEA2021948400837EBE /* MobileNet.mlmodel */,
 				4C2DBAEC2021EC7D00837EBE /* SqueezeNet.mlmodel */,
 				4C2DBAEE2021ED0200837EBE /* GoogLeNetPlaces.mlmodel */,
@@ -121,6 +129,15 @@
 				4C2DBAF22022001900837EBE /* Resnet50.mlmodel */,
 			);
 			path = Model;
+			sourceTree = "<group>";
+		};
+		4C98954B202773E4009A9B9A /* YOLO */ = {
+			isa = PBXGroup;
+			children = (
+				4C98954C202773FB009A9B9A /* YOLO.swift */,
+				4C98954E202780A5009A9B9A /* BoundingBox.swift */,
+			);
+			path = YOLO;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -195,13 +212,16 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4C98954D202773FB009A9B9A /* YOLO.swift in Sources */,
 				4C2DBAF32022001A00837EBE /* Resnet50.mlmodel in Sources */,
 				4C0DC5C1201BAF5E00F168A5 /* ViewController.swift in Sources */,
 				4C2DBAF12021EDEA00837EBE /* Inceptionv3.mlmodel in Sources */,
+				4C98954A20276A7E009A9B9A /* TinyYOLO.mlmodel in Sources */,
 				4C357A3D201F6CCD00304698 /* PickerViewDataSource.swift in Sources */,
 				4C2DBAEB2021948400837EBE /* MobileNet.mlmodel in Sources */,
 				4C2DBAEF2021ED0200837EBE /* GoogLeNetPlaces.mlmodel in Sources */,
 				4C2DBAED2021EC7D00837EBE /* SqueezeNet.mlmodel in Sources */,
+				4C98954F202780A5009A9B9A /* BoundingBox.swift in Sources */,
 				4C0DC5BF201BAF5E00F168A5 /* AppDelegate.swift in Sources */,
 				4C0DC5D4201BB10800F168A5 /* CameraViewController.swift in Sources */,
 				4C163E70201C96F900488ADC /* OpencvViewController.mm in Sources */,
