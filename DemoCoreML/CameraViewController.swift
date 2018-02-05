@@ -16,7 +16,12 @@ class CameraViewController: UIViewController {
     @IBOutlet weak var imageView: UIImageView!
     @IBOutlet weak var labelBlur: UILabel!
     @IBOutlet weak var labelFps: UILabel!
+    @IBOutlet weak var classificationView: UIVisualEffectView!
     @IBOutlet weak var labelClassification: UILabel!
+    @IBOutlet weak var sliderView: UIVisualEffectView!
+    @IBOutlet weak var slider: UISlider!
+    @IBOutlet weak var labelThresholdKey: UILabel!
+    @IBOutlet weak var labelThresholdValue: UILabel!
     
     /// Data source for the picker.
     let pickerDataSource = PickerDataSource()
@@ -63,7 +68,7 @@ class CameraViewController: UIViewController {
     override func viewDidLoad() {
         print("camera viewDidLoad", self.view.frame)
         super.viewDidLoad()
-        self.setupPicker()
+        YOLO.setup()
         self.setupOpenCV()
         self.setupCoreML()
     }
@@ -127,13 +132,15 @@ class CameraViewController: UIViewController {
     func setupView() -> Void {
         print("setup view")
         self.navigationController?.isNavigationBarHidden = true
+        
         self.imageView.isHidden = self.usePreviewLayer
         self.imageView.contentMode = .scaleAspectFit
-    }
-    
-    func setupPicker() -> Void {
+        
         self.pickerView.isHidden = true
         self.pickerCloser.isHidden = true
+        
+        self.sliderView.isHidden = true
+        self.slider.addTarget(self, action: #selector(self.sliderValueChanged), for: UIControlEvents.valueChanged)
     }
     
     func setupOpenCV() -> Void {
@@ -326,13 +333,64 @@ class CameraViewController: UIViewController {
      ** MARK: - Picker
      */
     @IBAction func pickerShow() -> Void {
+        self.everythingHide()
         self.pickerView.isHidden = false;
         self.pickerCloser.isHidden = false
     }
     
-    @IBAction func pickerHide() -> Void {
-        self.pickerView.isHidden = true;
+    @IBAction func everythingHide() -> Void {
+        self.pickerView.isHidden = true
+        self.sliderView.isHidden = true
         self.pickerCloser.isHidden = true
+    }
+    
+    /*
+     ** MARK: - Slider
+     */
+    @objc func sliderValueChanged() -> Void {
+        print(self.slider.value)
+        let sliderValue = self.slider.value
+        if sliderValue > 1.0 {
+            self.thresholdBlur = Int(sliderValue)
+            self.labelThresholdKey.text = "Blur 阈值:"
+            self.labelThresholdValue.text = String(self.thresholdBlur)
+        } else {
+            self.thresholdPropability = sliderValue
+            self.labelThresholdKey.text = "Model 阈值:"
+            self.labelThresholdValue.text = String(format: "%.2f", self.thresholdPropability)
+        }
+    }
+    
+    @IBAction func sliderBlur() {
+        if self.sliderView.isHidden {
+            self.labelThresholdKey.text = "Blur 阈值:"
+            self.labelThresholdValue.text = String(self.thresholdBlur)
+            self.slider.maximumValue = 100
+            self.slider.minimumValue = 10
+            self.slider.value = Float(self.thresholdBlur)
+            self.sliderShow()
+        } else {
+            self.everythingHide()
+        }
+    }
+    
+    @IBAction func sliderPropability() {
+        if self.sliderView.isHidden {
+            self.labelThresholdKey.text = "Model 阈值:"
+            self.labelThresholdValue.text = String(self.thresholdPropability)
+            self.slider.maximumValue = 0.80
+            self.slider.minimumValue = 0.05
+            self.slider.value = self.thresholdPropability
+            self.sliderShow()
+        } else {
+            self.everythingHide()
+        }
+    }
+    
+    func sliderShow() -> Void {
+        self.everythingHide()
+        self.sliderView.isHidden = false
+        self.pickerCloser.isHidden = false
     }
     
     
@@ -359,7 +417,6 @@ class CameraViewController: UIViewController {
             
             if self.pipelineModel == 6 {
                 self.isYolo = true
-                YOLO.setup()
                 // Add the bounding box layers to the UI, on top of the video preview.
                 for box in YOLO.boundingBoxes {
                     if self.usePreviewLayer {
@@ -371,12 +428,19 @@ class CameraViewController: UIViewController {
                 }
             } else {
                 self.isYolo = false
+                for box in YOLO.boundingBoxes {
+                    box.hide()
+                }
             }
             
+//            self.classificationView.isHidden = self.isYolo
+            
+            // Vision CoreML
             self.classificationRequest = VNCoreMLRequest(model: model, completionHandler: predictDidComplete)
-            self.classificationRequest.imageCropAndScaleOption = .centerCrop
             if self.isYolo {
                 self.classificationRequest.imageCropAndScaleOption = .scaleFill
+            } else {
+                self.classificationRequest.imageCropAndScaleOption = .centerCrop
             }
         } catch {
             fatalError("Failed to load Vision ML model: \(error)")
@@ -423,35 +487,28 @@ class CameraViewController: UIViewController {
     func predictDidComplete(request: VNRequest, error: Error?) {
         DispatchQueue.main.async {
             print("== DispatchQueue.main.async CoreML")
+            
             guard let results = request.results else {
                 self.labelClassification.text = "Unable to classify image."
                 print("Unable to classify image.")
                 return
             }
+//            print(results.first is Optional<VNCoreMLFeatureValueObservation>)
             
-            if self.isYolo {
+            if self.isYolo &&
+                results.first is Optional<VNCoreMLFeatureValueObservation> {
                 // YOLO `results` will be `VNCoreMLFeatureValueObservation`
                 let featureValues = results as! [VNCoreMLFeatureValueObservation]
                 if featureValues.isEmpty {
                     print("Nothing recognized.")
                 } else {
-                    guard let features = featureValues.first?.featureValue.multiArrayValue else {
-                        print("Unable to classify image.")
-                        return
-                    }
+                    let features = featureValues.first!.featureValue.multiArrayValue!
+                    
                     let predictions = YOLO.computePredictions(features: features)
                     for i in 0..<YOLO.boundingBoxes.count {
                         if i < predictions.count {
                             let prediction = predictions[i]
                             
-//                            print("YOLO image:", self.imageView.bounds, self.imageView.image!.size.width, self.imageView.image!.size.height)
-//                            print("YOLO predi:", prediction)
-                            
-                            // The predicted bounding box is in the coordinate space of the input
-                            // image, which is a square image of 416x416 pixels. We want to show it
-                            // on the video preview, which is as wide as the screen and has a 4:3
-                            // aspect ratio. The video preview also may be letterboxed at the top
-                            // and bottom.
                             /*
                              ** YOLO Coordinate
                              */
@@ -472,10 +529,7 @@ class CameraViewController: UIViewController {
                              */
                             let width = heightYolo
                             let height = widthYolo
-//                            let scaleX = scaleYYolo
-//                            let scaleY = scaleXYolo
                             let top = (self.imageView.bounds.height - height) / 2
-//                            print("YOLO scale:", width, height, top, scaleX, scaleY)
                             
                             var rect = prediction.rect
                             rect.origin.x = width - rectYolo.origin.y - rectYolo.size.height
@@ -483,8 +537,6 @@ class CameraViewController: UIViewController {
                             rect.origin.y += top
                             rect.size.width = rectYolo.size.height
                             rect.size.height = rectYolo.size.width
-//                            print("YOLO rect:", rectYolo)
-//                            print("YOLO rect:", rect)
                             
                             // Show the bounding box.
                             let label = String(format: "%@ %.1f", YOLO.labels[prediction.classIndex], prediction.score * 100)
@@ -494,14 +546,11 @@ class CameraViewController: UIViewController {
                             YOLO.boundingBoxes[i].hide()
                         }
                     }
-//                    let elapsed = CACurrentMediaTime() - startTimes.remove(at: 0)
-//                    showOnMainThread(boundingBoxes, elapsed)
                 }
-            } else {
+            } else if results.first is Optional<VNClassificationObservation> {
                 // The `results` will always be `VNClassificationObservation`s, as specified by the Core ML model in this project.
                 let classifications = results as! [VNClassificationObservation]
                 if classifications.isEmpty {
-//                self.labelClassification.text = "Nothing recognized."
                     print("Nothing recognized.")
                 } else {
                     // Display top classifications ranked by confidence in the UI.
